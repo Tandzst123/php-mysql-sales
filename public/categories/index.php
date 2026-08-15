@@ -26,9 +26,9 @@ require_once '/var/www/src/includes/navbar.php';
 
         <h2>Quản lý danh mục</h2>
 
-        <a href="#" class="btn btn-primary">
-            Thêm danh mục
-        </a>
+        <a href="/categories/create.php" class="btn btn-primary">
+    		Thêm danh mục
+	</a>
 
     </div>
 
@@ -65,13 +65,32 @@ require_once '/var/www/src/includes/navbar.php';
 
                     <td>
 
-                        <a href="#" class="btn btn-sm btn-warning">
-                            Sửa
-                        </a>
+                        <a
+				href="/categories/edit.php?id=<?= (int)$category['CategoryID'] ?>"
+    				class="btn btn-sm btn-warning"
+			>
+  				  Sửa
+			</a>
 
-                        <a href="#" class="btn btn-sm btn-danger">
-                            Xóa
-                        </a>
+                        <form
+    action="/categories/delete.php"
+    method="post"
+    class="d-inline"
+    onsubmit="return confirm('Bạn có chắc muốn xóa danh mục này?');"
+>
+    <input
+        type="hidden"
+        name="id"
+        value="<?= (int)$category['CategoryID'] ?>"
+    >
+
+    <button
+        type="submit"
+        class="btn btn-sm btn-danger"
+    >
+        Xóa
+    </button>
+</form>
 
                     </td>
 

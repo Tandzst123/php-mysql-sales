@@ -36,6 +36,29 @@
                     </a>
                 </li>
 
+                <li class="nav-item">
+                    <a class="nav-link" href="/shippers">
+                        Shipper
+                    </a>
+                </li>
+
+                 <li class="nav-item">
+                    <a class="nav-link" href="/suppliers">
+                        Quản lý nhà cung cấp
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="/customers">
+                        Quản lý khách hàng
+                    </a>
+                </li>
+
+                 <li class="nav-item">
+                    <a class="nav-link" href="/employees">
+                        Quản lý nhân viên
+                    </a>
+                </li>
             </ul>
         </div>
     </div>

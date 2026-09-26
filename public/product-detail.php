@@ -1,6 +1,11 @@
 <?php
 
+require_once '/var/www/src/config/session.php';
 require_once '/var/www/src/config/database.php';
+
+if (!isset($_SESSION['cart'])) {
+    $_SESSION['cart'] = [];
+}
 
 $productID = isset($_GET['id'])
     ? (int) $_GET['id']
@@ -22,12 +27,10 @@ $sql = "
         p.StockQuantity,
         c.CategoryName,
         s.SupplierName
-
     FROM
         products p,
         categories c,
         suppliers s
-
     WHERE
         p.CategoryID = c.CategoryID
         AND p.SupplierID = s.SupplierID
@@ -56,6 +59,58 @@ if (!$product) {
     exit;
 }
 
+/*
+|--------------------------------------------------------------------------
+| Thêm sản phẩm vào giỏ hàng
+|--------------------------------------------------------------------------
+*/
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $quantity = isset($_POST['quantity'])
+        ? (int) $_POST['quantity']
+        : 1;
+
+    if ($quantity < 1) {
+        $quantity = 1;
+    }
+
+    $stockQuantity = (int) $product['StockQuantity'];
+
+    if ($quantity > $stockQuantity) {
+        $quantity = $stockQuantity;
+    }
+
+    if ($quantity > 0) {
+
+        if (isset($_SESSION['cart'][$productID])) {
+
+            $_SESSION['cart'][$productID] += $quantity;
+
+            if (
+                $_SESSION['cart'][$productID]
+                > $stockQuantity
+            ) {
+                $_SESSION['cart'][$productID]
+                    = $stockQuantity;
+            }
+
+        } else {
+
+            $_SESSION['cart'][$productID] = $quantity;
+        }
+    }
+
+    header('Location: /cart.php');
+    exit;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Lấy danh sách hình ảnh sản phẩm
+|--------------------------------------------------------------------------
+*/
+
 $sqlImages = "
     SELECT
         ProductImageID,
@@ -63,18 +118,16 @@ $sqlImages = "
         AltText,
         IsPrimary,
         SortOrder
-
     FROM
         product_images
-
     WHERE
         ProductID = ?
-
     ORDER BY
         IsPrimary DESC,
         SortOrder ASC,
         ProductImageID ASC
 ";
+
 $stmtImages = $conn->prepare($sqlImages);
 
 $stmtImages->bind_param(
@@ -250,6 +303,43 @@ require_once '/var/www/src/includes/frontend/navbar.php';
 
             <hr>
 
+            <form method="POST" class="mb-4">
+
+                <div
+                    class="mb-3"
+                    style="max-width: 150px;"
+                >
+
+                    <label
+                        for="quantity"
+                        class="form-label"
+                    >
+                        Số lượng
+                    </label>
+
+                    <input
+                        type="number"
+                        class="form-control"
+                        id="quantity"
+                        name="quantity"
+                        value="1"
+                        min="1"
+                        max="<?= 
+                            (int) $product['StockQuantity']
+                        ?>"
+                    >
+
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Thêm vào giỏ hàng
+                </button>
+
+            </form>
+
             <dl class="row">
 
                 <dt class="col-sm-4">
@@ -293,7 +383,9 @@ require_once '/var/www/src/includes/frontend/navbar.php';
                 </dt>
 
                 <dd class="col-sm-8">
-                    <?= (int) $product['StockQuantity'] ?>
+                    <?= 
+                        (int) $product['StockQuantity']
+                    ?>
                 </dd>
 
             </dl>
@@ -318,10 +410,4 @@ require_once '/var/www/src/includes/frontend/navbar.php';
 
         </div>
 
-    </div>
-
-</main>
-
-<?php
-
-require_once '/var/www/src/includes/frontend/footer.php';
+    </

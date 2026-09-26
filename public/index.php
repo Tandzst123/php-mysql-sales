@@ -1,18 +1,24 @@
 <?php
+
+require_once '/var/www/src/config/session.php';
+
 $appName = "Hệ thống quản lý bán hàng";
+
+$pageTitle = $appName;
+
+require_once '/var/www/src/includes/frontend/header.php';
+require_once '/var/www/src/includes/frontend/navbar.php';
+
 ?>
 
-<!doctype html>
-<html lang="vi">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= $appName ?></title>
-</head>
-<body>
+<main class="container py-5">
 
-    <h1><?= $appName ?></h1>
+    <h1><?= htmlspecialchars($appName) ?></h1>
+
     <p>Ứng dụng PHP đang hoạt động.</p>
 
-</body>
-</html>
+</main>
+
+<?php
+
+require_once '/var/www/src/includes/frontend/footer.php';

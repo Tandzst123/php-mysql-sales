@@ -8,54 +8,121 @@ $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $lastName = trim($_POST['last_name'] ?? '');
-    $firstName = trim($_POST['first_name'] ?? '');
-    $birthDate = trim($_POST['birth_date'] ?? '');
-    $photo = trim($_POST['photo'] ?? '');
+    $fullName = trim($_POST['full_name'] ?? '');
+    $birthDate = $_POST['birth_date'] ?? null;
     $notes = trim($_POST['notes'] ?? '');
 
-    if ($lastName === '' || $firstName === '') {
+    if ($fullName === '') {
 
-        $error = 'Họ và tên nhân viên không được để trống.';
+        $error = 'Họ và tên không được để trống.';
 
     } else {
 
-        $sql = "
-            INSERT INTO employees
-            (
-                LastName,
-                FirstName,
-                BirthDate,
-                Photo,
-                Notes
-            )
-            VALUES (?, ?, ?, ?, ?)
-        ";
+        /*
+         * Tách họ tên thành Họ và Tên
+         * để phù hợp với cấu trúc bảng employees.
+         */
+        $parts = preg_split('/\s+/', $fullName);
 
-        $stmt = $conn->prepare($sql);
+        $firstName = array_pop($parts);
+        $lastName = implode(' ', $parts);
 
-        $stmt->bind_param(
-            'sssss',
-            $lastName,
-            $firstName,
-            $birthDate,
-            $photo,
-            $notes
-        );
-
-        if ($stmt->execute()) {
-
-            $stmt->close();
-
-            header('Location: /employees/');
-            exit;
-
-        } else {
-
-            $error = 'Không thể thêm nhân viên.';
+        if ($lastName === '') {
+            $lastName = $firstName;
+            $firstName = '';
         }
 
-        $stmt->close();
+        $photo = '';
+
+        /*
+         * Xử lý upload hình ảnh
+         */
+        if (isset($_FILES['photo']) && $_FILES['photo']['error'] !== UPLOAD_ERR_NO_FILE) {
+
+            if ($_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+
+                $allowedTypes = [
+                    'image/jpeg',
+                    'image/png',
+                    'image/gif',
+                    'image/webp'
+                ];
+
+                $fileType = mime_content_type($_FILES['photo']['tmp_name']);
+
+                if (!in_array($fileType, $allowedTypes, true)) {
+
+                    $error = 'Chỉ được chọn file hình ảnh JPG, PNG, GIF hoặc WEBP.';
+
+                } else {
+
+                    $extension = pathinfo(
+                        $_FILES['photo']['name'],
+                        PATHINFO_EXTENSION
+                    );
+
+                    $photo = uniqid('employee_', true) . '.' . $extension;
+
+                    $uploadDir = '/var/www/html/uploads/employees/';
+                    $uploadPath = $uploadDir . $photo;
+
+                    if (!move_uploaded_file(
+                        $_FILES['photo']['tmp_name'],
+                        $uploadPath
+                    )) {
+                        $error = 'Không thể tải hình ảnh lên.';
+                    }
+                }
+
+            } else {
+
+                $error = 'Có lỗi khi tải hình ảnh.';
+            }
+        }
+
+        if ($error === '') {
+
+            $sql = "
+                INSERT INTO employees
+                (
+                    LastName,
+                    FirstName,
+                    BirthDate,
+                    Photo,
+                    Notes
+                )
+                VALUES (?, ?, ?, ?, ?)
+            ";
+
+            $stmt = $conn->prepare($sql);
+
+            if ($birthDate === '') {
+    $birthDate = null;
+}
+
+$stmt->bind_param(
+    'sssss',
+    $lastName,
+    $firstName,
+    $birthDate,
+    $photo,
+    $notes
+);
+
+            if ($stmt->execute()) {
+
+                $stmt->close();
+
+                header('Location: /employees/');
+                exit;
+
+            } else {
+
+                $error = 'Không thể thêm nhân viên.';
+            }
+
+            $stmt->close();
+        }
     }
 }
 
@@ -76,19 +143,26 @@ require_once '/var/www/src/includes/navbar.php';
 
     <?php endif; ?>
 
-    <form method="post">
+    <form
+        method="post"
+        enctype="multipart/form-data"
+    >
 
         <div class="mb-3">
 
-            <label class="form-label">
-                Họ
+            <label
+                for="fullName"
+                class="form-label"
+            >
+                Họ và tên
             </label>
 
             <input
                 type="text"
-                name="last_name"
                 class="form-control"
-                value="<?= htmlspecialchars($_POST['last_name'] ?? '') ?>"
+                id="fullName"
+                name="full_name"
+                value="<?= htmlspecialchars($_POST['full_name'] ?? '') ?>"
                 required
             >
 
@@ -96,30 +170,18 @@ require_once '/var/www/src/includes/navbar.php';
 
         <div class="mb-3">
 
-            <label class="form-label">
-                Tên
-            </label>
-
-            <input
-                type="text"
-                name="first_name"
-                class="form-control"
-                value="<?= htmlspecialchars($_POST['first_name'] ?? '') ?>"
-                required
+            <label
+                for="birthDate"
+                class="form-label"
             >
-
-        </div>
-
-        <div class="mb-3">
-
-            <label class="form-label">
                 Ngày sinh
             </label>
 
             <input
                 type="date"
-                name="birth_date"
                 class="form-control"
+                id="birthDate"
+                name="birth_date"
                 value="<?= htmlspecialchars($_POST['birth_date'] ?? '') ?>"
             >
 
@@ -127,30 +189,37 @@ require_once '/var/www/src/includes/navbar.php';
 
         <div class="mb-3">
 
-            <label class="form-label">
+            <label
+                for="photo"
+                class="form-label"
+            >
                 Hình ảnh
             </label>
 
             <input
-                type="text"
-                name="photo"
+                type="file"
                 class="form-control"
-                value="<?= htmlspecialchars($_POST['photo'] ?? '') ?>"
-                placeholder="Tên file hình ảnh"
+                id="photo"
+                name="photo"
+                accept="image/jpeg,image/png,image/gif,image/webp"
             >
 
         </div>
 
         <div class="mb-3">
 
-            <label class="form-label">
+            <label
+                for="notes"
+                class="form-label"
+            >
                 Ghi chú
             </label>
 
             <textarea
-                name="notes"
                 class="form-control"
-                rows="4"
+                id="notes"
+                name="notes"
+                rows="3"
             ><?= htmlspecialchars($_POST['notes'] ?? '') ?></textarea>
 
         </div>

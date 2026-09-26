@@ -43,56 +43,132 @@ if (!$employee) {
 /* Xử lý cập nhật */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $lastName = trim($_POST['last_name'] ?? '');
-    $firstName = trim($_POST['first_name'] ?? '');
+    $fullName = trim($_POST['full_name'] ?? '');
     $birthDate = $_POST['birth_date'] ?? '';
-    $photo = trim($_POST['photo'] ?? '');
     $notes = trim($_POST['notes'] ?? '');
 
-    if ($lastName === '' || $firstName === '') {
+    if ($fullName === '') {
 
         $error = 'Họ và tên không được để trống.';
 
     } else {
 
-        $sql = "
-            UPDATE employees
-            SET
-                LastName = ?,
-                FirstName = ?,
-                BirthDate = NULLIF(?, ''),
-                Photo = ?,
-                Notes = ?
-            WHERE EmployeeID = ?
-        ";
+        /*
+         * Database hiện tại có 2 cột LastName và FirstName.
+         * Ta lưu toàn bộ họ tên vào LastName,
+         * còn FirstName để trống.
+         */
+        $lastName = $fullName;
+        $firstName = '';
 
-        $stmt = $conn->prepare($sql);
+        /* Giữ lại ảnh cũ */
+        $photo = $employee['Photo'];
 
-        $stmt->bind_param(
-            'sssssi',
-            $lastName,
-            $firstName,
-            $birthDate,
-            $photo,
-            $notes,
-            $employeeID
-        );
+        /* Nếu chọn ảnh mới */
+        if (
+            isset($_FILES['photo']) &&
+            $_FILES['photo']['error'] !== UPLOAD_ERR_NO_FILE
+        ) {
 
-        if ($stmt->execute()) {
+            if ($_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
 
-            $stmt->close();
+                $error = 'Không thể tải hình ảnh lên.';
 
-            header('Location: /employees/');
-            exit;
+            } else {
 
-        } else {
+                $allowedTypes = [
+                    'image/jpeg',
+                    'image/png',
+                    'image/gif',
+                    'image/webp'
+                ];
 
-            $error = 'Không thể cập nhật nhân viên.';
-            $stmt->close();
+                $fileType = mime_content_type(
+                    $_FILES['photo']['tmp_name']
+                );
+
+                if (!in_array($fileType, $allowedTypes)) {
+
+                    $error = 'Chỉ được chọn ảnh JPG, PNG, GIF hoặc WEBP.';
+
+                } else {
+
+                    $uploadDir = '/var/www/html/uploads/employees/';
+
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0777, true);
+                    }
+
+                    $extension = strtolower(
+                        pathinfo(
+                            $_FILES['photo']['name'],
+                            PATHINFO_EXTENSION
+                        )
+                    );
+
+                    $fileName = 'employee_' .
+                        $employeeID . '_' .
+                        time() . '.' .
+                        $extension;
+
+                    $uploadPath = $uploadDir . $fileName;
+
+                    if (
+                        move_uploaded_file(
+                            $_FILES['photo']['tmp_name'],
+                            $uploadPath
+                        )
+                    ) {
+                        $photo = $fileName;
+                    } else {
+                        $error = 'Không thể lưu hình ảnh.';
+                    }
+                }
+            }
+        }
+
+        /* Cập nhật database */
+        if ($error === '') {
+
+            $sql = "
+                UPDATE employees
+                SET
+                    LastName = ?,
+                    FirstName = ?,
+                    BirthDate = NULLIF(?, ''),
+                    Photo = ?,
+                    Notes = ?
+                WHERE EmployeeID = ?
+            ";
+
+            $stmt = $conn->prepare($sql);
+
+            $stmt->bind_param(
+                'sssssi',
+                $lastName,
+                $firstName,
+                $birthDate,
+                $photo,
+                $notes,
+                $employeeID
+            );
+
+            if ($stmt->execute()) {
+
+                $stmt->close();
+
+                header('Location: /employees/');
+                exit;
+
+            } else {
+
+                $error = 'Không thể cập nhật nhân viên: ' . $stmt->error;
+
+                $stmt->close();
+            }
         }
     }
 }
-
 require_once '/var/www/src/includes/header.php';
 require_once '/var/www/src/includes/navbar.php';
 
@@ -110,7 +186,7 @@ require_once '/var/www/src/includes/navbar.php';
 
     <?php endif; ?>
 
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
 
         <div class="mb-3">
 
@@ -127,51 +203,31 @@ require_once '/var/www/src/includes/navbar.php';
 
         </div>
 
-        <div class="mb-3">
+       <div class="mb-3">
 
-            <label
-                for="lastName"
-                class="form-label"
-            >
-                Họ
-            </label>
+    <label
+        for="fullName"
+        class="form-label"
+    >
+        Họ và tên
+    </label>
 
-            <input
-                type="text"
-                class="form-control"
-                id="lastName"
-                name="last_name"
-                value="<?= htmlspecialchars(
-                    $_POST['last_name']
-                    ?? $employee['LastName']
-                ) ?>"
-                required
-            >
+    <input
+        type="text"
+        class="form-control"
+        id="fullName"
+        name="full_name"
+        value="<?= htmlspecialchars(
+            $_POST['full_name']
+            ?? trim(
+                ($employee['LastName'] ?? '') . ' ' .
+                ($employee['FirstName'] ?? '')
+            )
+        ) ?>"
+        required
+    >
 
-        </div>
-
-        <div class="mb-3">
-
-            <label
-                for="firstName"
-                class="form-label"
-            >
-                Tên
-            </label>
-
-            <input
-                type="text"
-                class="form-control"
-                id="firstName"
-                name="first_name"
-                value="<?= htmlspecialchars(
-                    $_POST['first_name']
-                    ?? $employee['FirstName']
-                ) ?>"
-                required
-            >
-
-        </div>
+</div>
 
         <div class="mb-3">
 
@@ -206,17 +262,38 @@ require_once '/var/www/src/includes/navbar.php';
             </label>
 
             <input
-                type="text"
+                type="file"
                 class="form-control"
                 id="photo"
                 name="photo"
-                placeholder="Tên file hình ảnh"
-                value="<?= htmlspecialchars(
-                    $_POST['photo']
-                    ?? $employee['Photo']
-                    ?? ''
-                ) ?>"
+                accept="image/jpeg,image/png,image/gif,image/webp"
             >
+
+            <?php if (!empty($employee['Photo'])): ?>
+
+                <div class="mt-2">
+
+                    <small class="text-muted">
+                        Ảnh hiện tại:
+                    </small>
+
+                    <br>
+
+                    <img
+                        src="/uploads/employees/<?= htmlspecialchars($employee['Photo']) ?>"
+                        alt="Ảnh nhân viên"
+                        style="
+                            width: 100px;
+                            height: 100px;
+                            object-fit: cover;
+                            border-radius: 8px;
+                            margin-top: 5px;
+                        "
+                    >
+
+                </div>
+
+            <?php endif; ?>
 
         </div>
 

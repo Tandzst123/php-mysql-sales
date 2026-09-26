@@ -40,17 +40,14 @@ require_once '/var/www/src/includes/navbar.php';
         <table class="table table-bordered table-striped">
 
             <thead class="table-dark">
-
                 <tr>
                     <th>ID</th>
-                    <th>Họ</th>
-                    <th>Tên</th>
+                    <th>Họ và tên</th>
                     <th>Ngày sinh</th>
                     <th>Hình ảnh</th>
                     <th>Ghi chú</th>
                     <th>Thao tác</th>
                 </tr>
-
             </thead>
 
             <tbody>
@@ -64,23 +61,47 @@ require_once '/var/www/src/includes/navbar.php';
                     </td>
 
                     <td>
-                        <?= htmlspecialchars($employee['LastName']) ?>
+                        <?= htmlspecialchars(
+                            trim(
+                                $employee['LastName'] . ' ' .
+                                $employee['FirstName']
+                            )
+                        ) ?>
                     </td>
 
                     <td>
-                        <?= htmlspecialchars($employee['FirstName']) ?>
+                        <?= htmlspecialchars(
+                            $employee['BirthDate'] ?? ''
+                        ) ?>
                     </td>
 
                     <td>
-                        <?= htmlspecialchars($employee['BirthDate'] ?? '') ?>
+
+                        <?php if (!empty($employee['Photo'])): ?>
+
+                            <img
+                                src="/uploads/employees/<?= htmlspecialchars($employee['Photo']) ?>"
+                                alt="Ảnh nhân viên"
+                                style="
+                                    width: 70px;
+                                    height: 70px;
+                                    object-fit: cover;
+                                    border-radius: 5px;
+                                "
+                            >
+
+                        <?php else: ?>
+
+                            Chưa có ảnh
+
+                        <?php endif; ?>
+
                     </td>
 
                     <td>
-                        <?= htmlspecialchars($employee['Photo'] ?? '') ?>
-                    </td>
-
-                    <td>
-                        <?= htmlspecialchars($employee['Notes'] ?? '') ?>
+                        <?= htmlspecialchars(
+                            $employee['Notes'] ?? ''
+                        ) ?>
                     </td>
 
                     <td>

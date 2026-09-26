@@ -373,14 +373,25 @@ require_once '/var/www/src/includes/frontend/navbar.php';
                     Tiếp tục mua hàng
                 </a>
 
-                <button
-                    type="submit"
-                    name="update_cart"
-                    value="1"
-                    class="btn btn-primary"
-                >
-                    Cập nhật giỏ hàng
-                </button>
+                <div class="d-flex gap-2">
+
+                    <button
+                        type="submit"
+                        name="update_cart"
+                        value="1"
+                        class="btn btn-primary"
+                    >
+                        Cập nhật giỏ hàng
+                    </button>
+
+                    <a
+                        href="/checkout.php"
+                        class="btn btn-success"
+                    >
+                        Thanh toán
+                    </a>
+
+                </div>
 
             </div>
 

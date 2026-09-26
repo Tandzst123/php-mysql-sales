@@ -11,6 +11,7 @@ $conn = new mysqli(
     $password,
     $database
 );
+$conn->set_charset("utf8mb4");
 
 if ($conn->connect_error) {
     die('Kết nối cơ sở dữ liệu thất bại: ' . $conn->connect_error);

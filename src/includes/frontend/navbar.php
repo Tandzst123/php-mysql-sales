@@ -4,6 +4,8 @@ $cartCount = array_sum(
     $_SESSION['cart'] ?? []
 );
 
+$isLoggedIn = isset($_SESSION['customer_id']);
+
 ?>
 
 <nav class="navbar navbar-expand-lg bg-dark navbar-dark">
@@ -53,7 +55,39 @@ $cartCount = array_sum(
 
             </ul>
 
-            <div class="ms-auto d-flex gap-2">
+            <div class="ms-auto d-flex gap-2 align-items-center">
+
+                <?php if ($isLoggedIn): ?>
+
+                    <span class="text-white">
+                        Xin chào,
+                        <?= htmlspecialchars($_SESSION['customer_name']) ?>
+                    </span>
+
+                    <a
+                        class="btn btn-outline-light btn-sm"
+                        href="/logout.php"
+                    >
+                        Đăng xuất
+                    </a>
+
+                <?php else: ?>
+
+                    <a
+                        class="btn btn-outline-light btn-sm"
+                        href="/login.php"
+                    >
+                        Đăng nhập
+                    </a>
+
+                    <a
+                        class="btn btn-outline-light btn-sm"
+                        href="/register.php"
+                    >
+                        Đăng ký
+                    </a>
+
+                <?php endif; ?>
 
                 <a
                     class="btn btn-outline-light btn-sm"
